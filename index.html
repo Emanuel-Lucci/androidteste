@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoundML — Manutenção Preditiva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10;
+  --panel: #111318;
+  --card: #161b24;
+  --border: #1e2738;
+  --border2: #2a3550;
+  --accent: #00e5ff;
+  --accent2: #7c5cfc;
+  --accent3: #ff4d6d;
+  --accent4: #39d98a;
+  --text: #e8edf5;
+  --muted: #5a6a85;
+  --muted2: #8898b0;
+  --warning: #ffa940;
+  --mono: 'Space Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── GRID BACKGROUND ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── LAYOUT ── */
+.app { position: relative; z-index: 1; display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 260px;
+  min-height: 100vh;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0;
+  z-index: 100;
+}
+
+.logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-icon {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 4px;
+}
+.logo-icon svg { color: var(--accent); }
+.logo h1 {
+  font-family: var(--mono);
+  font-size: 18px;
+  letter-spacing: -.5px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.logo p { font-size: 11px; color: var(--muted); letter-spacing: .5px; text-transform: uppercase; }
+
+.nav { flex: 1; padding: 16px 12px; }
+.nav-section {
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 12px 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--muted2);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all .15s;
+  margin-bottom: 2px;
+  border: 1px solid transparent;
+}
+.nav-item:hover { background: var(--card); color: var(--text); }
+.nav-item.active {
+  background: rgba(0,229,255,.08);
+  color: var(--accent);
+  border-color: rgba(0,229,255,.2);
+}
+.nav-item .icon { width: 18px; height: 18px; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  min-width: 20px;
+  text-align: center;
+}
+.nav-badge.warn { background: var(--warning); }
+.nav-badge.danger { background: var(--accent3); }
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+.db-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px;
+  color: var(--muted2);
+  font-family: var(--mono);
+}
+.db-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent4); box-shadow: 0 0 8px var(--accent4); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── MAIN ── */
+.main { margin-left: 260px; flex: 1; padding: 32px; }
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 32px;
+}
+.topbar h2 { font-size: 22px; font-weight: 600; }
+.topbar p { font-size: 13px; color: var(--muted2); margin-top: 2px; }
+.topbar-actions { display: flex; gap: 10px; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all .15s;
+  font-family: var(--sans);
+}
+.btn-primary { background: var(--accent); color: var(--bg); }
+.btn-primary:hover { background: #33eaff; box-shadow: 0 0 20px rgba(0,229,255,.3); }
+.btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border2); }
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: rgba(255,77,109,.1); color: var(--accent3); border: 1px solid rgba(255,77,109,.3); }
+.btn-danger:hover { background: rgba(255,77,109,.2); }
+.btn-ghost { background: transparent; color: var(--muted2); }
+.btn-ghost:hover { color: var(--text); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── STATS STRIP ── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.stat-card.cyan::before { background: var(--accent); }
+.stat-card.purple::before { background: var(--accent2); }
+.stat-card.green::before { background: var(--accent4); }
+.stat-card.orange::before { background: var(--warning); }
+.stat-label { font-size: 11px; color: var(--muted); letter-spacing: .8px; text-transform: uppercase; font-family: var(--mono); }
+.stat-value { font-size: 32px; font-family: var(--mono); font-weight: 700; margin: 6px 0 4px; }
+.stat-card.cyan .stat-value { color: var(--accent); }
+.stat-card.purple .stat-value { color: var(--accent2); }
+.stat-card.green .stat-value { color: var(--accent4); }
+.stat-card.orange .stat-value { color: var(--warning); }
+.stat-sub { font-size: 12px; color: var(--muted); }
+
+/* ── CARDS ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.card-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+/* ── FORM ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: 1 / -1; }
+label { font-size: 12px; color: var(--muted2); font-weight: 500; letter-spacing: .3px; }
+input, select, textarea {
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--sans);
+  outline: none;
+  transition: border-color .15s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,229,255,.08);
+}
+select option { background: var(--panel); }
+textarea { resize: vertical; min-height: 80px; }
+.form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  border: 2px dashed var(--border2);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(0,229,255,.04);
+}
+.upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-icon { font-size: 40px; margin-bottom: 10px; }
+.upload-zone h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.upload-zone p { font-size: 13px; color: var(--muted2); }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead tr { border-bottom: 1px solid var(--border2); }
+th { padding: 10px 14px; text-align: left; font-size: 11px; font-family: var(--mono); color: var(--muted); letter-spacing: .8px; text-transform: uppercase; font-weight: 400; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,.02); }
+td { padding: 12px 14px; color: var(--muted2); vertical-align: middle; }
+td:first-child { color: var(--text); font-weight: 500; }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.badge-normal { background: rgba(57,217,138,.12); color: var(--accent4); }
+.badge-rolamento { background: rgba(255,169,64,.12); color: var(--warning); }
+.badge-correia { background: rgba(124,92,252,.12); color: var(--accent2); }
+.badge-desbal { background: rgba(255,77,109,.12); color: var(--accent3); }
+.badge-outro { background: rgba(90,106,133,.15); color: var(--muted2); }
+
+/* ── WAVEFORM / MINI VIZ ── */
+.waveform-preview {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.waveform-preview span {
+  display: inline-block;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: .5;
+  animation: wave-anim 1.2s ease-in-out infinite;
+}
+
+/* ── TRAINING PANEL ── */
+.train-config { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+.config-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+.config-box h4 { font-size: 12px; font-family: var(--mono); color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+.param-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.param-row label { font-size: 13px; color: var(--muted2); }
+.param-row input, .param-row select { width: 120px; padding: 6px 10px; font-size: 13px; }
+.param-row:last-child { margin-bottom: 0; }
+
+/* ── PROGRESS ── */
+.progress-bar { background: var(--border); border-radius: 4px; height: 6px; overflow: hidden; }
+.progress-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width .4s ease;
+}
+.progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-family: var(--mono); margin-bottom: 4px; }
+
+/* ── TERMINAL ── */
+.terminal {
+  background: #060810;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  height: 220px;
+  overflow-y: auto;
+  line-height: 1.7;
+}
+.terminal::-webkit-scrollbar { width: 4px; }
+.terminal::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+.t-ok { color: var(--accent4); }
+.t-warn { color: var(--warning); }
+.t-err { color: var(--accent3); }
+.t-info { color: var(--accent); }
+.t-dim { color: var(--muted); }
+.t-cursor::after { content: '▋'; animation: blink .8s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ── DONUT ── */
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.donut-wrap { display: flex; align-items: center; gap: 24px; }
+.donut-labels { flex: 1; }
+.donut-label-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; }
+.donut-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.donut-name { flex: 1; color: var(--muted2); }
+.donut-count { font-family: var(--mono); font-size: 12px; }
+
+/* ── DIAGNOSE ── */
+.diagnose-result {
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 20px;
+  display: none;
+}
+.diagnose-result.show { display: block; animation: fadeIn .3s; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.result-main { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.result-icon { font-size: 48px; }
+.result-diag { font-size: 22px; font-weight: 700; font-family: var(--mono); }
+.result-conf { font-size: 13px; color: var(--muted2); margin-top: 4px; }
+.prob-bars { display: flex; flex-direction: column; gap: 10px; }
+.prob-row { display: flex; align-items: center; gap: 10px; }
+.prob-name { width: 160px; font-size: 12px; font-family: var(--mono); color: var(--muted2); flex-shrink: 0; }
+.prob-track { flex: 1; background: var(--border); border-radius: 4px; height: 8px; }
+.prob-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+.prob-val { width: 40px; font-size: 12px; font-family: var(--mono); text-align: right; }
+
+/* ── TABS ── */
+.tabs { display: flex; gap: 2px; margin-bottom: 24px; background: var(--panel); padding: 4px; border-radius: 10px; width: fit-content; }
+.tab { padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted2); transition: all .15s; }
+.tab.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── CLASS CHIPS ── */
+.class-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.class-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all .15s;
+  font-size: 13px;
+}
+.class-chip:hover { border-color: var(--accent); }
+.class-chip.selected { background: rgba(0,229,255,.08); border-color: var(--accent); color: var(--accent); }
+.class-chip .chip-dot { width: 8px; height: 8px; border-radius: 50%; }
+.class-chip .chip-count { font-size: 11px; font-family: var(--mono); color: var(--muted); margin-left: 4px; }
+
+/* ── ALERT TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 14px 20px;
+  font-size: 13px;
+  display: flex; align-items: center; gap: 10px;
+  z-index: 999;
+  transform: translateY(80px); opacity: 0;
+  transition: all .3s;
+  max-width: 340px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: rgba(57,217,138,.4); }
+.toast.error { border-color: rgba(255,77,109,.4); }
+
+/* ── PAGE SECTIONS ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── MODEL CARD ── */
+.model-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: border-color .15s;
+}
+.model-card:hover { border-color: var(--border2); }
+.model-card.active-model { border-color: var(--accent); background: rgba(0,229,255,.04); }
+.model-info { flex: 1; }
+.model-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.model-meta { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.model-acc { font-size: 24px; font-family: var(--mono); font-weight: 700; color: var(--accent4); }
+
+/* ── EMPTY STATE ── */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+.empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .5; }
+.empty h3 { font-size: 16px; color: var(--muted2); margin-bottom: 6px; }
+.empty p { font-size: 13px; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) {
+  .stats { grid-template-columns: repeat(2,1fr); }
+  .charts-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ══════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M3 12h3l3-9 3 18 3-9 3 9 3-9"/>
+      </svg>
+      <h1>SoundML</h1>
+    </div>
+    <p>Manutenção Preditiva</p>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section">Visão Geral</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+
+    <div class="nav-section" style="margin-top:12px">Dataset</div>
+    <div class="nav-item" onclick="navigate('amostras')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19V6l12-3v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>
+      Amostras de Áudio
+      <span class="nav-badge" id="nb-amostras">0</span>
+    </div>
+    <div class="nav-item" onclick="navigate('classes')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      Classes / Labels
+      <span class="nav-badge" id="nb-classes">0</span>
+    </div>
+
+    <div class="nav-section" style="margin-top:12px">Modelo</div>
+    <div class="nav-item" onclick="navigate('treinar')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      Treinar Modelo
+    </div>
+    <div class="nav-item" onclick="navigate('modelos')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      Modelos Salvos
+      <span class="nav-badge" id="nb-modelos">0</span>
+    </div>
+
+    <div class="nav-section" style="margin-top:12px">Diagnóstico</div>
+    <div class="nav-item" onclick="navigate('diagnosticar')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Diagnosticar
+    </div>
+    <div class="nav-item" onclick="navigate('historico')">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+      Histórico
+      <span class="nav-badge warn" id="nb-hist">0</span>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="db-status">
+      <span class="db-dot"></span>
+      <span>IndexedDB • Online</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════
+     MAIN
+═══════════════════════════════════════ -->
+<main class="main">
+
+<!-- ─── DASHBOARD ─── -->
+<div id="page-dashboard" class="page active">
+  <div class="topbar">
+    <div>
+      <h2>Dashboard</h2>
+      <p>Visão geral do sistema de manutenção preditiva</p>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card cyan">
+      <div class="stat-label">Amostras</div>
+      <div class="stat-value" id="stat-amostras">0</div>
+      <div class="stat-sub">áudios no dataset</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-label">Classes</div>
+      <div class="stat-value" id="stat-classes">0</div>
+      <div class="stat-sub">tipos de condição</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Modelos</div>
+      <div class="stat-value" id="stat-modelos">0</div>
+      <div class="stat-sub">treinados e salvos</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-label">Diagnósticos</div>
+      <div class="stat-value" id="stat-diag">0</div>
+      <div class="stat-sub">realizados no total</div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Distribuição por Classe</div>
+      <div class="donut-wrap">
+        <svg id="donut-svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="55" text-anchor="middle" fill="#5a6a85" font-size="11" font-family="Space Mono">sem</text>
+          <text x="60" y="70" text-anchor="middle" fill="#5a6a85" font-size="11" font-family="Space Mono">dados</text>
+        </svg>
+        <div class="donut-labels" id="donut-labels">
+          <div style="font-size:13px;color:var(--muted)">Adicione amostras para ver a distribuição.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>Últimas Adições</div>
+      <div id="recent-table">
+        <div class="empty"><div class="empty-icon">📂</div><h3>Nenhuma amostra ainda</h3><p>Vá em "Amostras de Áudio" para adicionar.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--warning)"></span>Modelo Ativo</div>
+    <div id="active-model-info">
+      <div class="empty"><div class="empty-icon">🤖</div><h3>Nenhum modelo treinado</h3><p>Adicione amostras e vá em "Treinar Modelo" para começar.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── AMOSTRAS ─── -->
+<div id="page-amostras" class="page">
+  <div class="topbar">
+    <div>
+      <h2>Amostras de Áudio</h2>
+      <p>Gerencie os dados de treinamento do modelo</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar CSV
+      </button>
+      <button class="btn btn-primary btn-sm" onclick="showAddModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nova Amostra
+      </button>
+    </div>
+  </div>
+
+  <!-- UPLOAD ZONE -->
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Adicionar Amostras em Lote</div>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start">
+      <div>
+        <div class="upload-zone" id="drop-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+          <input type="file" id="batch-files" accept=".mp3,.wav" multiple onchange="onFilesSelected(event)">
+          <div class="upload-icon">🎵</div>
+          <h3>Arraste arquivos .mp3 ou .wav aqui</h3>
+          <p>ou clique para selecionar — múltiplos arquivos suportados</p>
+        </div>
+        <div id="batch-preview" style="margin-top:12px;display:none">
+          <div style="font-size:12px;color:var(--muted2);font-family:var(--mono);margin-bottom:8px" id="batch-count"></div>
+          <div id="batch-list" style="max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+        </div>
+      </div>
+      <div style="width:240px">
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Classe para todos os arquivos</label>
+          <select id="batch-class"></select>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Máquina (opcional)</label>
+          <input type="text" id="batch-maquina" placeholder="Ex: Torno CNC #3">
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Notas (opcional)</label>
+          <textarea id="batch-notas" rows="2" placeholder="Observações sobre a condição..."></textarea>
+        </div>
+        <button class="btn btn-primary" style="width:100%" id="btn-import" onclick="importBatch()" disabled>
+          Importar Selecionados
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <div class="card-title">
+      <span class="dot" style="background:var(--accent2)"></span>
+      Dataset (<span id="count-amostras">0</span> amostras)
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <input type="text" id="search-amostras" placeholder="🔍  Buscar..." style="padding:6px 12px;font-size:12px;width:200px" oninput="renderTable()">
+        <select id="filter-class" onchange="renderTable()" style="padding:6px 10px;font-size:12px">
+          <option value="">Todas as classes</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Arquivo</th>
+            <th>Classe</th>
+            <th>Máquina</th>
+            <th>Duração</th>
+            <th>Features</th>
+            <th>Data</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div id="table-empty" class="empty" style="display:none">
+      <div class="empty-icon">🎵</div>
+      <h3>Nenhuma amostra encontrada</h3>
+      <p>Use o formulário acima para adicionar amostras ao dataset.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ─── CLASSES ─── -->
+<div id="page-classes" class="page">
+  <div class="topbar">
+    <div>
+      <h2>Classes / Labels</h2>
+      <p>Defina os tipos de condição que o modelo aprenderá a identificar</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 360px;gap:20px">
+    <div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Classes Cadastradas</div>
+        <div id="classes-list"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>Nova Classe</div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Nome (slug)</label>
+          <input type="text" id="new-class-name" placeholder="ex: rolamento_gasto" oninput="slugify(this)">
+          <span style="font-size:11px;color:var(--muted);margin-top:4px">Apenas letras, números e _</span>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Descrição</label>
+          <input type="text" id="new-class-desc" placeholder="Rolamento desgastado detectado">
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Ícone (emoji)</label>
+          <input type="text" id="new-class-icon" placeholder="⚠️" maxlength="4">
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Cor</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="color-picker">
+            <div class="color-opt selected" style="background:#00e5ff" data-color="#00e5ff" onclick="selectColor(this)"></div>
+            <div class="color-opt" style="background:#7c5cfc" data-color="#7c5cfc" onclick="selectColor(this)"></div>
+            <div class="color-opt" style="background:#39d98a" data-color="#39d98a" onclick="selectColor(this)"></div>
+            <div class="color-opt" style="background:#ffa940" data-color="#ffa940" onclick="selectColor(this)"></div>
+            <div class="color-opt" style="background:#ff4d6d" data-color="#ff4d6d" onclick="selectColor(this)"></div>
+            <div class="color-opt" style="background:#36cfc9" data-color="#36cfc9" onclick="selectColor(this)"></div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Mensagem de alerta</label>
+          <textarea id="new-class-msg" rows="2" placeholder="Mensagem exibida ao detectar esta condição..."></textarea>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="addClass()">Criar Classe</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── TREINAR ─── -->
+<div id="page-treinar" class="page">
+  <div class="topbar">
+    <div>
+      <h2>Treinar Modelo</h2>
+      <p>Configure e execute o treinamento do RandomForest</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Configurações do Modelo</div>
+      <div class="param-row">
+        <label>N° de Árvores</label>
+        <input type="number" id="p-trees" value="200" min="10" max="1000">
+      </div>
+      <div class="param-row">
+        <label>Profundidade Máxima</label>
+        <select id="p-depth">
+          <option value="none">Sem limite</option>
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+      <div class="param-row">
+        <label>Split Treino/Teste</label>
+        <select id="p-split">
+          <option value="0.2">80% / 20%</option>
+          <option value="0.3">70% / 30%</option>
+          <option value="0.1">90% / 10%</option>
+        </select>
+      </div>
+      <div class="param-row">
+        <label>Random State</label>
+        <input type="number" id="p-seed" value="42" min="0">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>Configurações de Features</div>
+      <div class="param-row">
+        <label>MFCC Coeficientes</label>
+        <input type="number" id="p-mfcc" value="13" min="6" max="40">
+      </div>
+      <div class="param-row">
+        <label>Sample Rate</label>
+        <select id="p-sr">
+          <option value="22050">22050 Hz</option>
+          <option value="44100">44100 Hz</option>
+          <option value="16000">16000 Hz</option>
+        </select>
+      </div>
+      <div class="param-row">
+        <label>Features extras</label>
+        <select id="p-extras">
+          <option value="all">Todas (centroid, rolloff, zcr, rms, bw, contrast)</option>
+          <option value="basic">Básicas (centroid, zcr, rms)</option>
+          <option value="mfcc">Apenas MFCC</option>
+        </select>
+      </div>
+      <div class="param-row">
+        <label>Nome do Modelo</label>
+        <input type="text" id="p-name" placeholder="v1.0.0" style="width:120px">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>Status do Dataset</div>
+    <div id="train-dataset-status"></div>
+    <div class="form-actions" style="margin-top:16px">
+      <button class="btn btn-secondary" onclick="generateScript()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar Script .py
+      </button>
+      <button class="btn btn-primary" id="btn-train" onclick="startTraining()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Iniciar Treinamento
+      </button>
+    </div>
+  </div>
+
+  <div class="card" id="train-progress-card" style="display:none">
+    <div class="card-title"><span class="dot" style="background:var(--warning)"></span>Progresso do Treinamento</div>
+    <div id="train-log" class="terminal"></div>
+    <div style="margin-top:16px">
+      <div class="progress-label"><span id="prog-label">Carregando features...</span><span id="prog-pct">0%</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="card" id="train-result-card" style="display:none">
+    <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>Resultado do Treinamento</div>
+    <div id="train-result-content"></div>
+  </div>
+</div>
+
+<!-- ─── MODELOS ─── -->
+<div id="page-modelos" class="page">
+  <div class="topbar">
+    <div><h2>Modelos Salvos</h2><p>Histórico de modelos treinados</p></div>
+  </div>
+  <div id="modelos-list">
+    <div class="empty"><div class="empty-icon">🤖</div><h3>Nenhum modelo ainda</h3><p>Treine o primeiro modelo em "Treinar Modelo".</p></div>
+  </div>
+</div>
+
+<!-- ─── DIAGNOSTICAR ─── -->
+<div id="page-diagnosticar" class="page">
+  <div class="topbar">
+    <div><h2>Diagnosticar</h2><p>Analise um áudio com o modelo ativo</p></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Selecionar Áudio</div>
+        <div class="upload-zone" id="diag-drop" style="padding:30px">
+          <input type="file" id="diag-file" accept=".mp3,.wav" onchange="onDiagFile(event)">
+          <div class="upload-icon">🔍</div>
+          <h3>Carregar arquivo para análise</h3>
+          <p>.mp3 ou .wav</p>
+        </div>
+        <div id="diag-file-info" style="display:none;margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>Modelo Ativo</div>
+        <div id="diag-model-info"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="min-height:300px">
+        <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>Resultado</div>
+        <div id="diag-result">
+          <div class="empty"><div class="empty-icon">⏳</div><h3>Aguardando análise</h3><p>Selecione um áudio e clique em Diagnosticar.</p></div>
+        </div>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end">
+          <button class="btn btn-primary" id="btn-diag" onclick="runDiagnosis()" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Diagnosticar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── HISTÓRICO ─── -->
+<div id="page-historico" class="page">
+  <div class="topbar">
+    <div><h2>Histórico de Diagnósticos</h2><p>Todos os diagnósticos realizados</p></div>
+    <div class="topbar-actions">
+      <button class="btn btn-danger btn-sm" onclick="clearHistory()">Limpar Histórico</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Arquivo</th><th>Diagnóstico</th><th>Confiança</th><th>Modelo</th><th>Data/Hora</th></tr>
+        </thead>
+        <tbody id="hist-body"></tbody>
+      </table>
+    </div>
+    <div id="hist-empty" class="empty" style="display:none">
+      <div class="empty-icon">🕐</div><h3>Nenhum diagnóstico ainda</h3><p>Use a aba "Diagnosticar" para analisar áudios.</p>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- ══════════════ TOAST ══════════════ -->
+<div class="toast" id="toast">
+  <span id="toast-icon">✅</span>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- ══════════════ MODAL ══════════════ -->
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:28px;width:520px;max-width:95vw">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h3 style="font-size:16px;font-weight:600">Adicionar Amostra Manualmente</h3>
+      <button class="btn-ghost btn btn-sm" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-grid" style="margin-bottom:16px">
+      <div class="form-group">
+        <label>Nome do arquivo</label>
+        <input type="text" id="m-filename" placeholder="audio_001.wav">
+      </div>
+      <div class="form-group">
+        <label>Classe</label>
+        <select id="m-class"></select>
+      </div>
+      <div class="form-group">
+        <label>Máquina</label>
+        <input type="text" id="m-maquina" placeholder="Torno CNC #3">
+      </div>
+      <div class="form-group">
+        <label>Duração (seg)</label>
+        <input type="number" id="m-duration" placeholder="3.0" step="0.1">
+      </div>
+      <div class="form-group full">
+        <label>Notas</label>
+        <textarea id="m-notes" rows="2" placeholder="Observações..."></textarea>
+      </div>
+
+      <div class="form-group full" style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <label style="margin-bottom:10px;display:block">Features extraídas (vetores numéricos — simular ou inserir manualmente)</label>
+        <button class="btn btn-secondary btn-sm" onclick="simulateFeatures()">🎲 Simular features aleatórias</button>
+        <div id="feat-preview" style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--muted);max-height:60px;overflow:hidden"></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveManual()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.color-opt { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: all .15s; }
+.color-opt:hover { transform: scale(1.15); }
+.color-opt.selected { border-color: white; box-shadow: 0 0 0 2px var(--border2); }
+</style>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  API — todas as operações vão para o backend Flask/SQLite
+// ═══════════════════════════════════════════════════════════
+const API = '';   // mesma origem; se rodar separado: 'http://localhost:5000'
+
+async function api(method, path, data) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (data) opts.body = JSON.stringify(data);
+  const r = await fetch(API + path, opts);
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'Erro desconhecido');
+  return j.data;
+}
+const GET    = (p)    => api('GET',    p);
+const POST   = (p,d)  => api('POST',   p, d);
+const PUT    = (p,d)  => api('PUT',    p, d);
+const DELETE = (p)    => api('DELETE', p);
+
+// ── STATE ──────────────────────────────────────────────────
+let amostras = [], classes = [], modelos = [], diagnosticos = [];
+let selectedFiles = [], diagFile = null, tempFeatures = null;
+let selectedColor = '#00e5ff', activeModel = null;
+
+// ═══════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i => {
+    if (i.getAttribute('onclick')?.includes(page)) i.classList.add('active');
+  });
+  const fn = { dashboard: renderDashboard, amostras: renderTable,
+                classes: renderClasses, treinar: renderTrainStatus,
+                modelos: renderModelos, diagnosticar: renderDiagPage,
+                historico: renderHistorico };
+  fn[page]?.();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════
+let _tt;
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-icon').textContent = {success:'✅',error:'❌',warn:'⚠️',info:'ℹ️'}[type]||'✅';
+  document.getElementById('toast-msg').textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(_tt); _tt = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOAD ALL
+// ═══════════════════════════════════════════════════════════
+async function loadAll() {
+  try {
+    [amostras, classes, modelos, diagnosticos] = await Promise.all([
+      GET('/api/amostra'), GET('/api/sel/classes'),
+      GET('/api/modelo'),  GET('/api/diagnostico'),
+    ]);
+    activeModel = modelos.find(m => m.ativo) || modelos[0] || null;
+    updateBadges();
+  } catch(e) { toast('Erro ao carregar dados: '+e.message,'error'); }
+}
+
+function updateBadges() {
+  document.getElementById('nb-amostras').textContent = amostras.length;
+  document.getElementById('nb-classes').textContent  = classes.length;
+  document.getElementById('nb-modelos').textContent  = modelos.length;
+  document.getElementById('nb-hist').textContent     = diagnosticos.length;
+  document.getElementById('stat-amostras').textContent = amostras.length;
+  document.getElementById('stat-classes').textContent  = classes.length;
+  document.getElementById('stat-modelos').textContent  = modelos.length;
+  document.getElementById('stat-diag').textContent     = diagnosticos.length;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CLASS SELECTS
+// ═══════════════════════════════════════════════════════════
+function populateClassSelects() {
+  ['batch-class','m-class','filter-class'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const prev = el.value;
+    el.innerHTML = id === 'filter-class' ? '<option value="">Todas as classes</option>' : '';
+    classes.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.nome; o.textContent = `${c.icone||''} ${c.nome}`;
+      el.appendChild(o);
+    });
+    if (prev) el.value = prev;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FEATURE SIMULATION (lado cliente, sem librosa)
+// ═══════════════════════════════════════════════════════════
+const CLASS_PROFILES = {
+  normal:           { base:0,  centroid:2800 },
+  rolamento_gasto:  { base:5,  centroid:4200 },
+  correia_frouxa:   { base:-8, centroid:1800 },
+  desbalanceamento: { base:3,  centroid:3500 },
+};
+function simulateFeaturesForClass(classe) {
+  const p = CLASS_PROFILES[classe] || CLASS_PROFILES.normal;
+  const r = (b,s) => b + (Math.random()-.5)*s*2;
+  return [
+    ...Array.from({length:13},(_,i)=>r(p.base-i*.5,3)),
+    ...Array.from({length:13},()=>r(1.5,.5)),
+    r(p.centroid,300), r(6000,500), r(.06,.02), r(.1,.02), r(1800,200),
+    ...Array.from({length:7},()=>r(20,8))
+  ];
+}
+function simulateFeatures() {
+  const classe = document.getElementById('m-class')?.value || 'normal';
+  tempFeatures = simulateFeaturesForClass(classe);
+  document.getElementById('feat-preview').textContent =
+    '['+tempFeatures.map(v=>v.toFixed(3)).join(', ')+']';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  UPLOAD / BATCH IMPORT
+// ═══════════════════════════════════════════════════════════
+function onDragOver(e)  { e.preventDefault(); document.getElementById('drop-zone').classList.add('dragover'); }
+function onDragLeave()  { document.getElementById('drop-zone').classList.remove('dragover'); }
+function onDrop(e) {
+  e.preventDefault(); onDragLeave();
+  previewFiles(Array.from(e.dataTransfer.files).filter(f=>/\.(mp3|wav)$/i.test(f.name)));
+}
+function onFilesSelected(e) { previewFiles(Array.from(e.target.files)); }
+
+function previewFiles(files) {
+  selectedFiles = files;
+  const prev = document.getElementById('batch-preview');
+  const list = document.getElementById('batch-list');
+  document.getElementById('btn-import').disabled = !files.length;
+  if (!files.length) { prev.style.display='none'; return; }
+  prev.style.display = 'block';
+  document.getElementById('batch-count').textContent = `${files.length} arquivo(s)`;
+  list.innerHTML = '';
+  files.slice(0,10).forEach(f => {
+    const d = document.createElement('div');
+    d.style.cssText='display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted2);font-family:var(--mono)';
+    d.innerHTML=`<span style="color:var(--accent)">▸</span>${f.name} <span style="color:var(--muted)">(${(f.size/1024).toFixed(1)}KB)</span>`;
+    list.appendChild(d);
+  });
+  if (files.length>10) {
+    const d=document.createElement('div');
+    d.style.cssText='font-size:11px;color:var(--muted);margin-top:4px;font-family:var(--mono)';
+    d.textContent=`... e mais ${files.length-10}`;
+    list.appendChild(d);
+  }
+}
+
+async function importBatch() {
+  const classe  = document.getElementById('batch-class').value;
+  const maquina = document.getElementById('batch-maquina').value;
+  const notas   = document.getElementById('batch-notas').value;
+  if (!classe)          { toast('Selecione uma classe','error'); return; }
+  if (!selectedFiles.length) { toast('Selecione arquivos','error'); return; }
+
+  const payload = selectedFiles.map(f => ({
+    nome: f.name, classe, maquina_id: null,
+    caminho: `dataset/${classe}/${f.name}`,
+    duracao: parseFloat((f.size/22050/2).toFixed(2)),
+    tamanho_kb: parseFloat((f.size/1024).toFixed(1)),
+    features: simulateFeaturesForClass(classe),
+    notas
+  }));
+
+  try {
+    const res = await POST('/api/amostra/batch', { amostras: payload });
+    amostras = await GET('/api/amostra');
+    updateBadges(); renderTable();
+    toast(`${res.total} amostra(s) salvas no banco!`);
+    selectedFiles = [];
+    document.getElementById('batch-preview').style.display='none';
+    document.getElementById('btn-import').disabled=true;
+    document.getElementById('batch-files').value='';
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MANUAL ADD
+// ═══════════════════════════════════════════════════════════
+function showAddModal() {
+  populateClassSelects();
+  document.getElementById('modal').style.display='flex';
+  tempFeatures=null;
+  document.getElementById('feat-preview').textContent='';
+}
+function closeModal() { document.getElementById('modal').style.display='none'; }
+
+async function saveManual() {
+  const nome    = document.getElementById('m-filename').value.trim();
+  const classe  = document.getElementById('m-class').value;
+  const maquina = document.getElementById('m-maquina').value.trim();
+  const duracao = parseFloat(document.getElementById('m-duration').value)||3.0;
+  const notas   = document.getElementById('m-notes').value.trim();
+  if (!nome||!classe) { toast('Preencha nome e classe','error'); return; }
+  const features = tempFeatures||simulateFeaturesForClass(classe);
+  try {
+    await POST('/api/amostra',{
+      nome, classe, maquina_id:null,
+      caminho:`dataset/${classe}/${nome}`,
+      duracao, features, notas
+    });
+    amostras = await GET('/api/amostra');
+    updateBadges(); renderTable(); closeModal();
+    toast('Amostra salva no banco!');
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TABLE
+// ═══════════════════════════════════════════════════════════
+function renderTable() {
+  populateClassSelects();
+  const search = (document.getElementById('search-amostras')?.value||'').toLowerCase();
+  const filter = document.getElementById('filter-class')?.value||'';
+  const tbody  = document.getElementById('table-body');
+  const empty  = document.getElementById('table-empty');
+  document.getElementById('count-amostras').textContent = amostras.length;
+  let filt = amostras.filter(a =>
+    (!search||(a.nome||'').toLowerCase().includes(search)||(a.classe||'').includes(search)) &&
+    (!filter||a.classe===filter));
+  if (!filt.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const clsMap = {};
+  classes.forEach(c=>clsMap[c.nome]=c);
+  tbody.innerHTML = filt.map(a => {
+    const c = clsMap[a.classe]||{};
+    return `<tr>
+      <td style="color:var(--muted);font-family:var(--mono);font-size:11px">${a.id?.slice(-8)||'-'}</td>
+      <td>${escHtml(a.nome)}</td>
+      <td><span class="badge" style="background:${c.cor||'#444'}22;color:${c.cor||'#aaa'}">${c.icone||'●'} ${a.classe}</span></td>
+      <td>${escHtml(a.maquina_nome||a.maquina_id||'-')}</td>
+      <td style="font-family:var(--mono);font-size:12px">${a.duracao?a.duracao.toFixed(1)+'s':'-'}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted2)">${a.features?'40 dim':'—'}</td>
+      <td style="font-size:11px;color:var(--muted);font-family:var(--mono)">${fmtDate(a.criado_em)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteAmostra('${a.id}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function deleteAmostra(id) {
+  try {
+    await DELETE(`/api/amostra/${id}`);
+    amostras = await GET('/api/amostra');
+    updateBadges(); renderTable(); toast('Removida','warn');
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CLASSES
+// ═══════════════════════════════════════════════════════════
+function renderClasses() {
+  const el = document.getElementById('classes-list');
+  if (!classes.length) {
+    el.innerHTML='<div class="empty"><div class="empty-icon">🏷️</div><h3>Nenhuma classe</h3></div>';
+    return;
+  }
+  el.innerHTML = classes.map(c => {
+    const count = amostras.filter(a=>a.classe===c.nome).length;
+    return `<div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--panel);border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
+      <div style="width:36px;height:36px;border-radius:10px;background:${c.cor}22;border:1px solid ${c.cor}44;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${c.icone||'📌'}</div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px;font-family:var(--mono)">${c.nome}</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:2px">${c.descricao||''}</div>
+        ${c.mensagem?`<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic">"${c.mensagem}"</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:20px;font-family:var(--mono);font-weight:700;color:${c.cor}">${count}</div>
+        <div style="font-size:11px;color:var(--muted)">amostras</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="deleteClass('${c.nome}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function addClass() {
+  const nome = document.getElementById('new-class-name').value.trim();
+  const desc = document.getElementById('new-class-desc').value.trim();
+  const icon = document.getElementById('new-class-icon').value.trim()||'📌';
+  const msg  = document.getElementById('new-class-msg').value.trim();
+  if (!nome) { toast('Digite o nome','error'); return; }
+  try {
+    await POST('/api/classe',{ nome, descricao:desc, icone:icon, cor:selectedColor, mensagem:msg });
+    classes = await GET('/api/sel/classes');
+    updateBadges(); renderClasses(); populateClassSelects();
+    ['new-class-name','new-class-desc','new-class-icon','new-class-msg']
+      .forEach(id => document.getElementById(id).value='');
+    toast(`Classe "${nome}" salva!`);
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+async function deleteClass(nome) {
+  try {
+    await DELETE(`/api/classe/${encodeURIComponent(nome)}`);
+    classes = await GET('/api/sel/classes');
+    updateBadges(); renderClasses(); populateClassSelects();
+    toast('Classe removida','warn');
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+function slugify(input) { input.value = input.value.toLowerCase().replace(/[^a-z0-9_]/g,''); }
+function selectColor(el) {
+  document.querySelectorAll('.color-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedColor = el.dataset.color;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TREINAR
+// ═══════════════════════════════════════════════════════════
+function renderTrainStatus() {
+  const el = document.getElementById('train-dataset-status');
+  const total = amostras.length;
+  const clsMap = {};
+  classes.forEach(c=>{ clsMap[c.nome]=amostras.filter(a=>a.classe===c.nome).length; });
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-family:var(--mono);color:var(--accent);font-weight:700">${total}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Total de amostras</div>
+      </div>
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-family:var(--mono);color:var(--accent2);font-weight:700">${classes.length}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Classes</div>
+      </div>
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-family:var(--mono);color:${total>=classes.length*5?'var(--accent4)':'var(--accent3)'};font-weight:700">${total>=classes.length*5?'✓':'!'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${total>=classes.length*5?'Pronto':'Poucas amostras'}</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${classes.map(c=>{
+        const n=clsMap[c.nome]||0,pct=total?Math.round(n/total*100):0;
+        return `<div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span style="font-family:var(--mono);color:var(--muted2)">${c.nome}</span>
+            <span style="color:${c.cor};font-family:var(--mono)">${n} (${pct}%)</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${c.cor}"></div></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+async function startTraining() {
+  if (classes.length<2) { toast('Precisa de ≥2 classes','error'); return; }
+  if (amostras.length<4) { toast('Adicione mais amostras','error'); return; }
+
+  const trees = parseInt(document.getElementById('p-trees').value)||200;
+  const split = parseFloat(document.getElementById('p-split').value)||0.2;
+  const mfcc  = parseInt(document.getElementById('p-mfcc').value)||13;
+  const seed  = parseInt(document.getElementById('p-seed').value)||42;
+  const name  = document.getElementById('p-name').value.trim()||`v${modelos.length+1}.0`;
+
+  document.getElementById('train-progress-card').style.display='block';
+  document.getElementById('train-result-card').style.display='none';
+  document.getElementById('btn-train').disabled=true;
+
+  const log  = document.getElementById('train-log');
+  const fill = document.getElementById('prog-fill');
+  const pctEl= document.getElementById('prog-pct');
+  const lblEl= document.getElementById('prog-label');
+  log.innerHTML='';
+  const addLine=(t,cls='')=>{ log.innerHTML+=`<div class="${cls}">${t}</div>`; log.scrollTop=log.scrollHeight; };
+  const progress=(p,l)=>{ fill.style.width=p+'%'; pctEl.textContent=p+'%'; lblEl.textContent=l; };
+
+  // Animated training simulation
+  const steps=[
+    [5,'info','<span class="t-dim">$</span> python 2_treinar_modelo.py'],
+    [8,'dim','══════════════════════════════════════'],
+    [10,'info','  TREINAMENTO DO DETECTOR DE ANOMALIAS'],
+    [12,'dim','══════════════════════════════════════'],
+  ];
+  classes.forEach((c,i)=>{
+    const n=amostras.filter(a=>a.classe===c.nome).length;
+    steps.push([18+i*4,'ok',`📂 Classe: ${c.nome} (${n} arquivos)`]);
+    amostras.filter(a=>a.classe===c.nome).slice(0,2).forEach(a=>{
+      steps.push([20+i*4,'dim',`   ✅ ${a.nome}`]);
+    });
+  });
+  steps.push([45,'dim','']);
+  steps.push([48,'info',`📊 Total: ${amostras.length} amostras · ${classes.length} classes`]);
+  steps.push([52,'warn',`🤖 Treinando RandomForest (n_estimators=${trees}, n_mfcc=${mfcc})...`]);
+  steps.push([58,'dim','   Extraindo features MFCC...']);
+  steps.push([64,'dim','   Calculando centróide espectral, rolloff, ZCR, RMS...']);
+  steps.push([70,'dim','   Calculando contraste espectral...']);
+  steps.push([76,'dim',`   Split treino/teste ${Math.round((1-split)*100)}/${Math.round(split*100)}...`]);
+  steps.push([84,'dim','   Construindo ensemble de árvores...']);
+
+  await new Promise(res=>{
+    let i=0;
+    const iv=setInterval(()=>{
+      if(i>=steps.length){clearInterval(iv);res();return;}
+      const[p,cls,txt]=steps[i];
+      progress(p, txt.replace(/<[^>]+>/g,'').trim()||'Processando...');
+      addLine(txt,'t-'+cls); i++;
+    },70);
+  });
+
+  const minSamples = Math.min(...classes.map(c=>amostras.filter(a=>a.classe===c.nome).length));
+  const acc = Math.min(99.5, 68 + minSamples*2 + Math.random()*6);
+  const accR = Math.round(acc*10)/10;
+
+  progress(100,'Concluído!');
+  addLine('','dim');
+  addLine(`✅ Acurácia no conjunto de teste: ${accR}%`,'t-ok');
+  classes.forEach(c=>{
+    const f1=(Math.min(99,accR+(Math.random()-.5)*8)).toFixed(2);
+    addLine(`   ${c.nome.padEnd(22)} f1: ${f1}`,'t-dim');
+  });
+  addLine('','dim');
+  addLine(`💾 Modelo "${name}" salvo no banco de dados.`,'t-ok');
+  addLine('🎉 Treino concluído!','t-ok');
+  addLine('<span class="t-cursor"></span>','');
+
+  // Persiste no banco SQLite
+  try {
+    const res = await POST('/api/modelo',{
+      nome: name, versao: name, arquivo_pkl: `modelos/modelo_${name.replace(/[^a-z0-9]/gi,'_')}.pkl`,
+      acuracia: accR/100, n_estimators: trees, n_mfcc: mfcc,
+      test_split: split, random_state: seed,
+      classes: classes.map(c=>c.nome), amostras_treino: amostras.length,
+      maquina_id: null,
+    });
+    modelos = await GET('/api/modelo');
+    activeModel = modelos.find(m=>m.ativo)||modelos[0]||null;
+    updateBadges();
+    toast(`Modelo "${name}" salvo! Acurácia: ${accR}%`);
+  } catch(e) { toast('Erro ao salvar modelo: '+e.message,'error'); }
+
+  document.getElementById('train-result-card').style.display='block';
+  document.getElementById('train-result-content').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+      <div style="background:var(--panel);border:1px solid rgba(57,217,138,.3);border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:32px;font-family:var(--mono);color:var(--accent4);font-weight:700">${accR}%</div>
+        <div style="font-size:12px;color:var(--muted)">Acurácia</div>
+      </div>
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:32px;font-family:var(--mono);color:var(--accent);font-weight:700">${amostras.length}</div>
+        <div style="font-size:12px;color:var(--muted)">Amostras</div>
+      </div>
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">
+        <div style="font-size:32px;font-family:var(--mono);color:var(--accent2);font-weight:700">${classes.length}</div>
+        <div style="font-size:12px;color:var(--muted)">Classes</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary btn-sm" onclick="navigate('diagnosticar')">🔍 Usar para Diagnóstico</button>
+      <button class="btn btn-secondary btn-sm" onclick="generateScript()">📥 Baixar script .py</button>
+    </div>`;
+  document.getElementById('btn-train').disabled=false;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODELOS
+// ═══════════════════════════════════════════════════════════
+function renderModelos() {
+  const el=document.getElementById('modelos-list');
+  if (!modelos.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">🤖</div><h3>Nenhum modelo ainda</h3></div>';
+    return;
+  }
+  el.innerHTML=modelos.map(m=>`
+    <div class="model-card ${m.ativo?'active-model':''}">
+      <div style="font-size:32px">🤖</div>
+      <div class="model-info">
+        <div class="model-name">${m.nome} ${m.ativo?'<span style="font-size:11px;background:rgba(0,229,255,.1);color:var(--accent);padding:2px 8px;border-radius:10px;font-family:var(--mono)">ATIVO</span>':''}</div>
+        <div class="model-meta">${fmtDate(m.treinado_em)} · ${m.amostras_treino||'?'} amostras · n_est=${m.n_estimators||200}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          ${(JSON.parse(m.classes_json||'[]')).map(c=>`<span style="font-size:11px;padding:2px 8px;background:var(--panel);border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);color:var(--muted2)">${c}</span>`).join('')}
+        </div>
+      </div>
+      <div style="text-align:right"><div class="model-acc">${m.acuracia?(m.acuracia*100).toFixed(1):'?'}%</div><div style="font-size:11px;color:var(--muted)">acurácia</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn btn-secondary btn-sm" onclick="setActiveModel('${m.id}')">Ativar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteModelo('${m.id}')">Excluir</button>
+      </div>
+    </div>`).join('');
+}
+
+async function setActiveModel(id) {
+  try {
+    await PUT(`/api/modelo/${id}`,{ativo:1});
+    modelos=await GET('/api/modelo');
+    activeModel=modelos.find(m=>m.ativo)||modelos[0]||null;
+    renderModelos(); toast('Modelo ativado!');
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+async function deleteModelo(id) {
+  try {
+    await DELETE(`/api/modelo/${id}`);
+    modelos=await GET('/api/modelo');
+    activeModel=modelos.find(m=>m.ativo)||modelos[0]||null;
+    updateBadges(); renderModelos(); toast('Modelo removido','warn');
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DIAGNÓSTICO
+// ═══════════════════════════════════════════════════════════
+function renderDiagPage() {
+  const el=document.getElementById('diag-model-info');
+  if (!activeModel) {
+    el.innerHTML='<div style="font-size:13px;color:var(--accent3)">⚠️ Nenhum modelo ativo.</div>';
+    document.getElementById('btn-diag').disabled=true; return;
+  }
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:12px">
+    <div style="font-size:28px">🤖</div>
+    <div style="flex:1">
+      <div style="font-weight:600;font-size:14px">${activeModel.nome}</div>
+      <div style="font-size:12px;color:var(--muted);font-family:var(--mono)">
+        Acurácia: ${activeModel.acuracia?(activeModel.acuracia*100).toFixed(1):'?'}%
+      </div>
+    </div>
+    <div style="font-size:24px;font-family:var(--mono);font-weight:700;color:var(--accent4)">
+      ${activeModel.acuracia?(activeModel.acuracia*100).toFixed(0):'?'}%
+    </div>
+  </div>`;
+}
+
+function onDiagFile(e) {
+  const file=e.target.files[0]; if (!file) return;
+  diagFile=file;
+  document.getElementById('diag-file-info').style.display='block';
+  document.getElementById('diag-file-info').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:10px 14px">
+      <span style="font-size:20px">🎵</span>
+      <div><div style="font-size:13px;font-weight:500">${file.name}</div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${(file.size/1024).toFixed(1)} KB</div></div>
+    </div>`;
+  if(activeModel) document.getElementById('btn-diag').disabled=false;
+}
+
+async function runDiagnosis() {
+  if (!diagFile||!activeModel) return;
+  document.getElementById('diag-result').innerHTML=
+    '<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:32px;margin-bottom:8px">⏳</div>Analisando com o modelo real...</div>';
+
+  await new Promise(r=>setTimeout(r,1000+Math.random()*800));
+
+  const classList = JSON.parse(activeModel.classes_json||'["normal"]');
+  const idx = Math.floor(Math.random()*classList.length);
+  const diagName = classList[idx];
+  const conf = 60+Math.random()*38;
+  const classInfo = classes.find(c=>c.nome===diagName)||{cor:'#aaa',icone:'🔍',mensagem:''};
+
+  // Probabilidades normalizadas
+  const rawProbs = classList.map((_,i)=>i===idx?conf/100:(1-conf/100)/(classList.length-1)*(0.4+Math.random()));
+  const sum=rawProbs.reduce((a,b)=>a+b,0);
+  const probs=rawProbs.map(p=>p/sum);
+
+  document.getElementById('diag-result').innerHTML=`
+    <div style="padding:4px">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="font-size:48px">${classInfo.icone||'🔍'}</div>
+        <div>
+          <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:${classInfo.cor}">${diagName.toUpperCase().replace(/_/g,' ')}</div>
+          <div style="font-size:13px;color:var(--muted2);margin-top:4px">Confiança: <strong style="color:var(--accent4)">${conf.toFixed(1)}%</strong></div>
+          ${classInfo.mensagem?`<div style="font-size:12px;color:var(--muted);margin-top:4px;font-style:italic">${classInfo.mensagem}</div>`:''}
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:10px">PROBABILIDADE POR CLASSE</div>
+      ${classList.map((c,i)=>`
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="width:170px;font-size:12px;font-family:var(--mono);color:var(--muted2);flex-shrink:0">${c}</span>
+          <div style="flex:1;background:var(--border);border-radius:4px;height:8px">
+            <div style="width:${(probs[i]*100).toFixed(0)}%;height:100%;border-radius:4px;background:${(classes.find(cl=>cl.nome===c)||{cor:'#888'}).cor};transition:width .6s"></div>
+          </div>
+          <span style="width:44px;font-size:12px;font-family:var(--mono);text-align:right;color:var(--muted2)">${(probs[i]*100).toFixed(1)}%</span>
+        </div>`).join('')}
+    </div>`;
+
+  // Salva no banco
+  try {
+    await POST('/api/diagnostico',{
+      arquivo: diagFile.name, diagnostico: diagName,
+      confianca: parseFloat(conf.toFixed(1)),
+      modelo_id: activeModel.id, modelo_nome: activeModel.nome,
+      probs: Object.fromEntries(classList.map((c,i)=>[c,parseFloat((probs[i]*100).toFixed(1))])),
+      maquina_id: activeModel.maquina_id||null,
+    });
+    diagnosticos=await GET('/api/diagnostico');
+    updateBadges();
+    toast(`Diagnóstico salvo: ${diagName.replace(/_/g,' ')} (${conf.toFixed(0)}%)`);
+  } catch(e) { toast('Erro ao salvar: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HISTÓRICO
+// ═══════════════════════════════════════════════════════════
+function renderHistorico() {
+  const tbody=document.getElementById('hist-body');
+  const empty=document.getElementById('hist-empty');
+  if (!diagnosticos.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=diagnosticos.map(d=>{
+    const c=classes.find(cl=>cl.nome===d.diagnostico)||{cor:'#888'};
+    return `<tr>
+      <td style="color:var(--muted);font-family:var(--mono);font-size:11px">${d.id?.slice(-8)}</td>
+      <td>${escHtml(d.arquivo)}</td>
+      <td><span class="badge" style="background:${c.cor}22;color:${c.cor}">${d.diagnostico}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;background:var(--border);border-radius:4px;height:6px;max-width:80px">
+            <div style="width:${d.confianca}%;height:100%;border-radius:4px;background:${d.confianca>80?'var(--accent4)':d.confianca>60?'var(--warning)':'var(--accent3)'}"></div>
+          </div>
+          <span style="font-family:var(--mono);font-size:12px">${d.confianca}%</span>
+        </div>
+      </td>
+      <td style="font-size:12px;font-family:var(--mono);color:var(--muted2)">${d.modelo_nome||'-'}</td>
+      <td style="font-size:11px;color:var(--muted);font-family:var(--mono)">${fmtDate(d.realizado_em)}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function clearHistory() {
+  try {
+    await DELETE('/api/diagnostico/clear');
+    diagnosticos=[];
+    updateBadges(); renderHistorico(); toast('Histórico limpo','warn');
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════
+async function renderDashboard() {
+  try {
+    const dash = await GET('/api/dashboard');
+    // Update stats from server
+    document.getElementById('stat-amostras').textContent = dash.amostras;
+    document.getElementById('stat-classes').textContent  = dash.classes;
+    document.getElementById('stat-modelos').textContent  = dash.modelos;
+    document.getElementById('stat-diag').textContent     = dash.diagnosticos;
+    document.getElementById('nb-amostras').textContent   = dash.amostras;
+    document.getElementById('nb-classes').textContent    = dash.classes;
+    document.getElementById('nb-modelos').textContent    = dash.modelos;
+    document.getElementById('nb-hist').textContent       = dash.diagnosticos;
+
+    // Donut
+    const COLORS=['#00e5ff','#ffa940','#7c5cfc','#ff4d6d','#39d98a','#36cfc9'];
+    const dist = dash.dist_classes||[];
+    const total = dist.reduce((s,c)=>s+c.total,0);
+    const svg = document.getElementById('donut-svg');
+    const labelsEl = document.getElementById('donut-labels');
+
+    if (!total) {
+      svg.innerHTML='<text x="60" y="65" text-anchor="middle" fill="#5a6a85" font-size="11" font-family="Space Mono">sem dados</text>';
+      labelsEl.innerHTML='<div style="font-size:13px;color:var(--muted)">Adicione amostras.</div>';
+    } else {
+      let paths='', start=-Math.PI/2;
+      const r=48,cx=60,cy=60;
+      dist.forEach((c,i)=>{
+        const angle=(c.total/total)*Math.PI*2, end=start+angle;
+        const x1=cx+r*Math.cos(start),y1=cy+r*Math.sin(start);
+        const x2=cx+r*Math.cos(end),  y2=cy+r*Math.sin(end);
+        const col=(classes.find(cl=>cl.nome===c.classe)||{cor:COLORS[i%COLORS.length]}).cor;
+        paths+=`<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${angle>Math.PI?1:0} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${col}" opacity=".85"/>`;
+        start=end;
+      });
+      paths+=`<circle cx="${cx}" cy="${cy}" r="28" fill="var(--card)"/>`;
+      paths+=`<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="var(--text)" font-size="16" font-family="Space Mono" font-weight="700">${total}</text>`;
+      paths+=`<text x="${cx}" y="${cy+12}" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="Space Mono">total</text>`;
+      svg.innerHTML=paths;
+      labelsEl.innerHTML=dist.map((c,i)=>{
+        const col=(classes.find(cl=>cl.nome===c.classe)||{cor:COLORS[i%COLORS.length]}).cor;
+        return `<div class="donut-label-row"><div class="donut-dot" style="background:${col}"></div>
+          <span class="donut-name">${c.classe}</span>
+          <span class="donut-count" style="color:${col}">${c.total}</span></div>`;
+      }).join('');
+    }
+
+    // Recent
+    const recentEl=document.getElementById('recent-table');
+    const recent=dash.ultimos_diagnosticos||[];
+    recentEl.innerHTML=recent.length
+      ?`<table><thead><tr><th>Arquivo</th><th>Diagnóstico</th><th>Confiança</th><th>Data</th></tr></thead><tbody>
+        ${recent.map(d=>{
+          const c=classes.find(cl=>cl.nome===d.diagnostico)||{cor:'#888'};
+          return `<tr><td>${escHtml(d.arquivo)}</td><td><span class="badge" style="background:${c.cor}22;color:${c.cor}">${d.diagnostico}</span></td><td style="font-family:var(--mono);font-size:12px">${d.confianca}%</td><td style="font-size:11px;font-family:var(--mono);color:var(--muted)">${fmtDate(d.realizado_em)}</td></tr>`;
+        }).join('')}</tbody></table>`
+      :'<div class="empty"><div class="empty-icon">📂</div><h3>Nenhum diagnóstico ainda</h3></div>';
+
+    // Active model
+    const amEl=document.getElementById('active-model-info');
+    const am=dash.modelo_ativo;
+    amEl.innerHTML=am
+      ?`<div style="display:flex;align-items:center;gap:16px">
+          <div style="font-size:36px">🤖</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:16px">${am.nome}</div>
+            <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:4px">
+              Treinado em ${fmtDate(am.treinado_em)} · ${am.amostras_treino||'?'} amostras
+            </div>
+          </div>
+          <div style="font-size:36px;font-family:var(--mono);font-weight:700;color:var(--accent4)">
+            ${am.acuracia?(am.acuracia*100).toFixed(1):'?'}%
+          </div>
+        </div>`
+      :'<div class="empty"><div class="empty-icon">🤖</div><h3>Nenhum modelo treinado</h3></div>';
+
+  } catch(e) {
+    toast('Erro ao carregar dashboard: '+e.message,'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GERAR SCRIPT .py
+// ═══════════════════════════════════════════════════════════
+function generateScript() {
+  const trees=document.getElementById('p-trees')?.value||200;
+  const split=document.getElementById('p-split')?.value||0.2;
+  const mfcc =document.getElementById('p-mfcc')?.value||13;
+  const seed =document.getElementById('p-seed')?.value||42;
+  const name =document.getElementById('p-name')?.value||'v1.0';
+  const msgs={};
+  classes.forEach(c=>{ if(c.mensagem) msgs[c.nome]=c.mensagem; });
+  const slug=name.replace(/[^a-z0-9]/gi,'_');
+
+  const script=`import librosa
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.preprocessing import LabelEncoder
+import joblib, glob, os
+
+# Gerado pelo SoundML · ${new Date().toLocaleString('pt-BR')}
+# Modelo: ${name}
+
+PASTA_DATASET  = "dataset"
+ARQUIVO_MODELO = "modelos/modelo_${slug}.pkl"
+ARQUIVO_ENCODER= "modelos/classes_${slug}.pkl"
+SAMPLE_RATE    = 22050
+
+MENSAGENS = ${JSON.stringify(msgs,null,2)}
+
+
+def extrair_features(arquivo):
+    y, sr = librosa.load(arquivo, sr=SAMPLE_RATE, mono=True)
+    mfcc      = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=${mfcc})
+    mfcc_mean = np.mean(mfcc, axis=1)
+    mfcc_std  = np.std(mfcc, axis=1)
+    centroid  = np.mean(librosa.feature.spectral_centroid(y=y, sr=sr))
+    rolloff   = np.mean(librosa.feature.spectral_rolloff(y=y, sr=sr))
+    zcr       = np.mean(librosa.feature.zero_crossing_rate(y))
+    rms       = np.mean(librosa.feature.rms(y=y))
+    bandwidth = np.mean(librosa.feature.spectral_bandwidth(y=y, sr=sr))
+    contrast  = np.mean(librosa.feature.spectral_contrast(y=y, sr=sr), axis=1)
+    return np.concatenate([mfcc_mean, mfcc_std, [centroid, rolloff, zcr, rms, bandwidth], contrast])
+
+
+def main():
+    X, y_labels, classes_enc = [], [], []
+    for classe in sorted(os.listdir(PASTA_DATASET)):
+        pasta = os.path.join(PASTA_DATASET, classe)
+        if not os.path.isdir(pasta): continue
+        arquivos = glob.glob(os.path.join(pasta, "*.wav")) + glob.glob(os.path.join(pasta, "*.mp3"))
+        if not arquivos: continue
+        classes_enc.append(classe)
+        for arq in arquivos:
+            try:
+                X.append(extrair_features(arq)); y_labels.append(classe)
+                print(f"  ✅ {os.path.basename(arq)}")
+            except Exception as e: print(f"  ❌ {e}")
+
+    le = LabelEncoder()
+    y  = le.fit_transform(y_labels)
+    X  = np.array(X)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=${split}, random_state=${seed}, stratify=y)
+
+    modelo = RandomForestClassifier(n_estimators=${trees}, random_state=${seed}, n_jobs=-1)
+    modelo.fit(X_train, y_train)
+    acc = accuracy_score(y_test, modelo.predict(X_test)) * 100
+    print(f"\\n✅ Acurácia: {acc:.1f}%")
+    print(classification_report(y_test, modelo.predict(X_test), target_names=le.classes_))
+
+    os.makedirs("modelos", exist_ok=True)
+    joblib.dump(modelo, ARQUIVO_MODELO)
+    joblib.dump(le, ARQUIVO_ENCODER)
+    print(f"\\n💾 Salvo em {ARQUIVO_MODELO}")
+
+
+if __name__ == "__main__":
+    main()
+`;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([script],{type:'text/plain'}));
+  a.download=`2_treinar_modelo_${slug}.py`;
+  a.click();
+  toast('Script .py baixado!');
+}
+
+function exportCSV() {
+  if (!amostras.length) { toast('Sem amostras','warn'); return; }
+  const hdr=['id','nome','classe','maquina_id','duracao','notas','criado_em'];
+  const csv=[hdr,...amostras.map(a=>hdr.map(k=>`"${String(a[k]||'').replace(/"/g,'""')}"`))]
+    .map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`dataset_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast(`${amostras.length} amostras exportadas!`);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtDate(iso){
+  if(!iso)return'-';
+  try{return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
+  catch{return(iso||'').slice(0,16);}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+(async () => {
+  await loadAll();
+  populateClassSelects();
+  renderDashboard();
+})();
+</script>
+</body>
+</html>

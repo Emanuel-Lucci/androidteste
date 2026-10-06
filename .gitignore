@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+modelos/*.pkl
+uploads/
+*.db-shm
+*.db-wal
